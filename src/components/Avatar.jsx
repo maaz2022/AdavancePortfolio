@@ -8,14 +8,22 @@ import { useFrame } from '@react-three/fiber';
 import { useControls } from 'leva';
 import * as THREE from "three";
 export function Avatar(props) {
-  const {headFollow, cursorFollow} = useControls({
-    headFollow: false, cursorFollow: false
+    const {animation} = props;
+  const {headFollow, cursorFollow, wireFrame} = useControls({
+    headFollow: false, cursorFollow: false, wireFrame : false
   })
-  const group = useRef();
+
+  const group = useRef(); 
   const { nodes, materials } = useGLTF('models/66bc7d2bd68d5b80e2c563fc.glb')
   const {animations: typingAnimation} = useFBX('animations/Typing.fbx');
+  const {animations: standingAnimation} = useFBX('animations/Standing Idle.fbx');
+  const {animations: fallingAnimation} = useFBX('animations/Falling Idle.fbx');
+
   typingAnimation[0].name="Typing";
-  const {actions} = useAnimations(typingAnimation,group);
+  standingAnimation[0].name="Standing";
+  fallingAnimation[0].name="Falling";
+
+  const {actions} = useAnimations([typingAnimation[0], standingAnimation[0], fallingAnimation[0]], group);
 
   useFrame((state)=>{
     if (headFollow){
@@ -25,14 +33,21 @@ export function Avatar(props) {
     if (cursorFollow){
       const target = new THREE.Vector3(state.mouse.x, state.mouse.y, 1);
       group.current.getObjectByName("Spine").lookAt(target);
-    }
-    
+    } 
   });
   
   useEffect(()=>{
-    actions['Typing'].reset().play();
-  },[]);
+    actions[animation].reset().fadeIn(0.5).play();
+    return()=>{
+      actions[animation].reset().fadeOut(0);
+    }
+  },[animation]);
 
+  useEffect(()=>{
+    Object.values(materials).forEach((material)=>{
+      material.wireframe = wireFrame;
+    })
+  },[wireFrame])
   return (
    <group {...props} ref={group} dispose={null}>
      <group rotation-x={-Math.PI/2}>
